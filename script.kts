@@ -21,7 +21,7 @@ class BloomFilter(
     }
   }
 
-  fun evaluate() {
+  fun evaluate(): Float {
     var correctCount = 0
     for (word in checkWords) {
       val bloomFilterResult = infer(word)
@@ -30,7 +30,7 @@ class BloomFilter(
         correctCount += 1
       }
     }
-    println("k: $k, m: $m, accuracy rate: ${correctCount.toFloat() / checkWords.size}")
+    return correctCount.toFloat() / checkWords.size
   }
   
   // get index list using hash function
@@ -73,13 +73,31 @@ class BloomFilter(
   }
 }
 
-val kList = listOf(3, 5, 10, 50)
-val mList = listOf(15_000_000)
-
-for (k in kList) {
-  for (m in mList) {
+fun findMinimumLengthForAccuracy(
+  k: Int,
+  targetAccuracy: Float
+){
+  var ok = 15_000_000 // considering maximum memory size 
+  var ng = 1
+  while(ok - ng > 1) {
+    val m = (ok+ng)/2
     val bf = BloomFilter(k,m)
     bf.load()
-    bf.evaluate()
+    val accuracy = bf.evaluate()
+    if(accuracy >= targetAccuracy) ok = m
+    else ng = m
+
+    println("k = $k, m = $m achieves accuracy $accuracy")
+  }
+  println("k = $k, m = $ok achieves accuracy $targetAccuracy")
+  println("====================================================")
+}
+
+val kList = listOf(3, 5, 10, 50)
+val accuracyList = listOf(0.99f, 0.999f)
+
+for (k in kList) {
+  for (accuracy in accuracyList) {
+    findMinimumLengthForAccuracy(k, accuracy)
   }
 }
