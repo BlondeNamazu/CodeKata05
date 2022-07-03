@@ -1,65 +1,85 @@
 import java.io.File
 import java.security.MessageDigest
 
-val m = 18
-val k = 3
-
 val md5 = MessageDigest.getInstance("MD5")
-val bloom = Array(m){false}
+val dictionary = File("dictionary.txt").readLines()
+val checkWords = File("random5-chars.txt").readLines()
 
-// get index list using hash function
-fun getHashedIndices(input: String): List<Int> {
-  var target = input
-  var result = mutableListOf<Int>()
+class BloomFilter(
+  val k: Int,
+  val m: Int
+){
+  val bloom = Array(m){false}
 
-  repeat(k) {
-    val digest = md5.digest(target.toByteArray())
-    var index: Long = 0L
+  // load dictionary and save result to bloom[m] using hashed indices
+  fun load() {
+    for (word in dictionary) {
+      val indices = getHashedIndices(word)
+      for (index in indices) {
+        bloom[index] = true
+      }
+    }
+  }
 
-    // use first 56 bit (8bit * 7) to determine index
-    for (i in 0..6) {
-
-      // get byte value in (-128 to 127) and convert to positive range (0 to 255)
-      val positiveIndex = digest[i].toInt() + 128
-
-      // finally, index is composed of digest 0 to 6. Index in bit expression looks like below:
-      // |digest 0|digest 1|digest 2|digest 3|...|digest 6|
-      // |01000101|01110101|01010100|11010101|...|00010101|
-      index = index * 256 + positiveIndex
-
+  fun evaluate() {
+    var correctCount = 0
+    for (word in checkWords) {
+      val bloomFilterResult = infer(word)
+      val groundTruth = dictionary.contains(word)
+      if(bloomFilterResult == groundTruth) {
+        correctCount += 1
+      }
+    }
+    println("k: $k, m: $m, accuracy rate: ${correctCount.toFloat() / checkWords.size}")
+  }
+  
+  // get index list using hash function
+  fun getHashedIndices(input: String): List<Int> {
+    var target = input
+    var result = mutableListOf<Int>()
+  
+    repeat(k) {
+      val digest = md5.digest(target.toByteArray())
+      var index: Long = 0L
+  
+      // use first 56 bit (8bit * 7) to determine index
+      for (i in 0..6) {
+  
+        // get byte value in (-128 to 127) and convert to positive range (0 to 255)
+        val positiveIndex = digest[i].toInt() + 128
+  
+        // finally, index is composed of digest 0 to 6. Index in bit expression looks like below:
+        // |digest 0|digest 1|digest 2|digest 3|...|digest 6|
+        // |01000101|01110101|01010100|11010101|...|00010101|
+        index = index * 256 + positiveIndex
+      }
+  
+      // index should be in (0 to m)
+      result.add((index % m).toInt())
+  
       // "NMZ" is not contained in dictionary, so it is suit for prefix
       target += "NMZ"
     }
-
-    // index should be in (0 to m)
-    result.add((index % m).toInt())
-  }
-
-  return result.toList()
-}
-
-fun isContained(input: String): Boolean {
-  val indices = getHashedIndices(input)
-  return indices.all { index ->
-    bloom[index]
-  }
-}
   
-
-val dictionary = File("dictionary.txt").readLines()
-
-// load dictionary and save result to bloom[m] using hashed indices
-for (word in dictionary) {
-  val indices = getHashedIndices(word)
-  for (index in indices) {
-    bloom[index] = true
+    return result.toList()
+  }
+  
+  // check if input is contained using BloomFilter
+  fun infer(input: String): Boolean {
+    val indices = getHashedIndices(input)
+    return indices.all { index ->
+      bloom[index]
+    }
   }
 }
 
-// check words
-println("print out words both contained in random5-chars")
-val checkWords = File("random5-chars.txt").readLines()
-for (word in checkWords) {
-  if(isContained(word)) println(word)
-}
+val kList = listOf(3, 5, 10, 50)
+val mList = listOf(15_000_000)
 
+for (k in kList) {
+  for (m in mList) {
+    val bf = BloomFilter(k,m)
+    bf.load()
+    bf.evaluate()
+  }
+}
