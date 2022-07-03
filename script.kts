@@ -73,6 +73,19 @@ class BloomFilter(
   }
 }
 
+// main execution
+fun main() {
+  val k = 10
+  val m = 5_000_000
+  val bf = BloomFilter(k, m)
+  bf.load()
+  val accuracy = bf.evaluate()
+  println("k = $k, m = $m achieves accuracy $accuracy")
+}
+
+main()
+
+// optional: binary search
 fun findMinimumLengthForAccuracy(
   k: Int,
   targetAccuracy: Float
@@ -93,11 +106,16 @@ fun findMinimumLengthForAccuracy(
   println("====================================================")
 }
 
-val kList = listOf(3, 5, 10, 50)
-val accuracyList = listOf(0.99f, 0.999f)
-
-for (k in kList) {
-  for (accuracy in accuracyList) {
-    findMinimumLengthForAccuracy(k, accuracy)
+// optional: binary search (executing function)
+fun binarySearch() {
+  val kList = listOf(3, 5, 10, 50)
+  val accuracyList = listOf(0.99f, 0.999f)
+  
+  for (k in kList) {
+    for (accuracy in accuracyList) {
+      findMinimumLengthForAccuracy(k, accuracy)
+    }
   }
 }
+
+// binarySearch()
